@@ -1833,346 +1833,346 @@ process SOFTWARE_VERSIONS {
 //     """
 // }
 
-// /*
-// ================================================================================
-//                             Auxiliary functions
-// ================================================================================
-// */
+/*
+================================================================================
+                            Auxiliary functions
+================================================================================
+*/
 
-// // Check integer
-// def isValidInteger(value){
-//     value instanceof Integer
-// }
+// Check integer
+def isValidInteger(value){
+    value instanceof Integer
+}
 
-// // Check parameter existence
-// def checkParameterExistence(it, list) {
-//     if (!list.contains(it)) {
-//         log.warn "Unknown parameter: ${it}"
-//         return false
-//     }
-//     return true
-// }
+// Check parameter existence
+def checkParameterExistence(it, list) {
+    if (!list.contains(it)) {
+        log.warn "Unknown parameter: ${it}"
+        return false
+    }
+    return true
+}
 
-// // Compare each parameter with a list of parameters
-// def checkParameterList(list, realList) {
-//     return list.every{ checkParameterExistence(it, realList) }
-// }
+// Compare each parameter with a list of parameters
+def checkParameterList(list, realList) {
+    return list.every{ checkParameterExistence(it, realList) }
+}
 
-// // Define list of available tools
-// def defineToolList() {
-//     return [
-//         'ciriquant',
-//         'circexplorer2',
-//         'find_circ',
-//         'circrna_finder',
-//         'dcc',
-//         'mapsplice',
-//         'segemehl'
-//         ]
-// }
+// Define list of available tools
+def defineToolList() {
+    return [
+        'ciriquant',
+        'circexplorer2',
+        'find_circ',
+        'circrna_finder',
+        'dcc',
+        'mapsplice',
+        'segemehl'
+        ]
+}
 
-// // Define module list
-// def defineModuleList() {
-//     return [
-//     'circrna_discovery',
-//     'mirna_prediction',
-//     'differential_expression'
-//     ]
-// }
+// Define module list
+def defineModuleList() {
+    return [
+    'circrna_discovery',
+    'mirna_prediction',
+    'differential_expression'
+    ]
+}
 
-// // Check if a row has the expected number of item
-// def checkNumberOfItem(row, number) {
-//     if (row.size() != number) exit 1, "[nf-core/circrna] error:  Invalid CSV input - malformed row (e.g. missing column) in ${row}, see '--help' flag and documentation under 'running the pipeline' for more information"
-//     return true
-// }
+// Check if a row has the expected number of item
+def checkNumberOfItem(row, number) {
+    if (row.size() != number) exit 1, "[nf-core/circrna] error:  Invalid CSV input - malformed row (e.g. missing column) in ${row}, see '--help' flag and documentation under 'running the pipeline' for more information"
+    return true
+}
 
-// // Return file if it exists
-// def return_file(it) {
-//     if (!file(it).exists()) exit 1, "[nf-core/circrna] error: Cannot find supplied FASTQ or BAM input file. If using input method CSV set to NA if no file required. See '--help' flag and documentation under 'running the pipeline' for more information. Check file: ${it}"
-//     return file(it)
-// }
+// Return file if it exists
+def return_file(it) {
+    if (!file(it).exists()) exit 1, "[nf-core/circrna] error: Cannot find supplied FASTQ or BAM input file. If using input method CSV set to NA if no file required. See '--help' flag and documentation under 'running the pipeline' for more information. Check file: ${it}"
+    return file(it)
+}
 
-// // Check file extension
-// def has_extension(it, extension) {
-//     it.toString().toLowerCase().endsWith(extension.toLowerCase())
-// }
+// Check file extension
+def has_extension(it, extension) {
+    it.toString().toLowerCase().endsWith(extension.toLowerCase())
+}
 
-// // Read input files from input CSV
-// def extract_data(csvFile){
-//     Channel
-//         .fromPath(csvFile)
-//         .splitCsv(header: true, sep: ',')
-//         .map{ row ->
+// Read input files from input CSV
+def extract_data(csvFile){
+    Channel
+        .fromPath(csvFile)
+        .splitCsv(header: true, sep: ',')
+        .map{ row ->
 
-//         def expected_keys = ["Sample_ID", "Read1", "Read2", "Bam"]
-//         if(!row.keySet().containsAll(expected_keys)) exit 1, "[nf-core/circrna] error: Invalid CSV input - malformed column names. Please use the column names 'Sample_ID', 'Read1', 'Read2', 'Bam'."
+        def expected_keys = ["Sample_ID", "Read1", "Read2", "Bam"]
+        if(!row.keySet().containsAll(expected_keys)) exit 1, "[nf-core/circrna] error: Invalid CSV input - malformed column names. Please use the column names 'Sample_ID', 'Read1', 'Read2', 'Bam'."
 
-//         checkNumberOfItem(row, 4)
+        checkNumberOfItem(row, 4)
 
-//         def samples = row.Sample_ID
-//         def read1 = row.Read1.matches('NA') ? 'NA' : return_file(row.Read1)
-//         def read2 = row.Read2.matches('NA') ? 'NA' : return_file(row.Read2)
-//         def bam = row.Bam.matches('NA') ? 'NA' : return_file(row.Bam)
+        def samples = row.Sample_ID
+        def read1 = row.Read1.matches('NA') ? 'NA' : return_file(row.Read1)
+        def read2 = row.Read2.matches('NA') ? 'NA' : return_file(row.Read2)
+        def bam = row.Bam.matches('NA') ? 'NA' : return_file(row.Bam)
 
-//         if(samples == '' || read1 == '' || read2 == '' || bam == '') exit 1, "[nf-core/circrna] error: a field does not contain any information. Please check your CSV file"
-//         if(read1.matches('NA') && read2.matches('NA') && bam.matches('NA')) exit 1, "[nf-core/circrna] error: A row in your CSV file appears to have missing information."
-//         if( !read1.matches('NA') && !has_extension(read1, "fastq.gz") && !has_extension(read1, "fq.gz") && !has_extension(read1, "fastq") && !has_extension(read1, "fq")) exit 1, "[nf-core/circrna] error: A specified R1 file either has a non-recognizable FASTQ extension or is not NA. See '--help' flag and documentation under 'running the pipeline' for more information. Check: ${r1}"
-//         if( !read2.matches('NA') && !has_extension(read2, "fastq.gz") && !has_extension(read2, "fq.gz") && !has_extension(read2, "fastq") && !has_extension(read2, "fq")) exit 1, "[nf-core/circrna] error: A specified R2 file either has a non-recognizable FASTQ extension or is not NA. See '--help' flag and documentation under 'running the pipeline' for more information. Check: ${r2}"
-//         if( !bam.matches('NA') && !has_extension(bam, "bam")) exit 1, "[nf-core/eager] error: A specified BAM file either has a non-recognizable extension or is not NA. See '--help' flag and documentation under 'running the pipeline' for more information. Check: ${bam}"
+        if(samples == '' || read1 == '' || read2 == '' || bam == '') exit 1, "[nf-core/circrna] error: a field does not contain any information. Please check your CSV file"
+        if(read1.matches('NA') && read2.matches('NA') && bam.matches('NA')) exit 1, "[nf-core/circrna] error: A row in your CSV file appears to have missing information."
+        if( !read1.matches('NA') && !has_extension(read1, "fastq.gz") && !has_extension(read1, "fq.gz") && !has_extension(read1, "fastq") && !has_extension(read1, "fq")) exit 1, "[nf-core/circrna] error: A specified R1 file either has a non-recognizable FASTQ extension or is not NA. See '--help' flag and documentation under 'running the pipeline' for more information. Check: ${r1}"
+        if( !read2.matches('NA') && !has_extension(read2, "fastq.gz") && !has_extension(read2, "fq.gz") && !has_extension(read2, "fastq") && !has_extension(read2, "fq")) exit 1, "[nf-core/circrna] error: A specified R2 file either has a non-recognizable FASTQ extension or is not NA. See '--help' flag and documentation under 'running the pipeline' for more information. Check: ${r2}"
+        if( !bam.matches('NA') && !has_extension(bam, "bam")) exit 1, "[nf-core/eager] error: A specified BAM file either has a non-recognizable extension or is not NA. See '--help' flag and documentation under 'running the pipeline' for more information. Check: ${bam}"
 
-//         // output tuple mimicking fromFilePairs if FASTQ provided, else tuple for BAM
-//         if(bam.matches('NA')){
-//             [ samples, [read1, read2] ]
-//         }else{
-//             [ samples, bam ]
-//         }
+        // output tuple mimicking fromFilePairs if FASTQ provided, else tuple for BAM
+        if(bam.matches('NA')){
+            [ samples, [read1, read2] ]
+        }else{
+            [ samples, bam ]
+        }
 
-//         }
-// }
+        }
+}
 
-// // If no input CSV provided, parse input directory containing files.
-// def retrieve_input_paths(input, type){
+// If no input CSV provided, parse input directory containing files.
+def retrieve_input_paths(input, type){
 
-//     if(type == 'fastq'){
+    if(type == 'fastq'){
 
-//         fastq_files = input
-//         Channel
-//                 .fromFilePairs(fastq_files)
-//                 .filter { it =~/.*.fastq.gz|.*.fq.gz|.*.fastq|.*.fq/ }
-//                 .ifEmpty{exit 1, "[nf-core/circrna] error: Your FASTQ files do not have the appropriate extension of either '.fastq.gz', '.fq.gz', .fastq' or '.fq'."}
-//                 .map{ row -> [ row[0], [ row[1][0], row[1][1] ]]}
-//                 .ifEmpty{exit 1, "[nf-core/circrna] error: --input was empty - no files supplied"}
-//                 .set{reads_for_csv}
+        fastq_files = input
+        Channel
+                .fromFilePairs(fastq_files)
+                .filter { it =~/.*.fastq.gz|.*.fq.gz|.*.fastq|.*.fq/ }
+                .ifEmpty{exit 1, "[nf-core/circrna] error: Your FASTQ files do not have the appropriate extension of either '.fastq.gz', '.fq.gz', .fastq' or '.fq'."}
+                .map{ row -> [ row[0], [ row[1][0], row[1][1] ]]}
+                .ifEmpty{exit 1, "[nf-core/circrna] error: --input was empty - no files supplied"}
+                .set{reads_for_csv}
 
-//     }else if(type == 'bam'){
+    }else if(type == 'bam'){
 
-//         bam_files = input
-//         Channel
-//                 .fromFilePairs(bam_files, size: 1)
-//                 .filter{ it =~/.*.bam/}
-//                 .map{ row -> [row[0], [row[1][0]]]}
-//                 .ifEmpty{exit 1, "[nf-core/circrna] error: Cannot find bam file matching: ${bam_files}"}
-//                 .set{reads_for_csv}
-//     }
+        bam_files = input
+        Channel
+                .fromFilePairs(bam_files, size: 1)
+                .filter{ it =~/.*.bam/}
+                .map{ row -> [row[0], [row[1][0]]]}
+                .ifEmpty{exit 1, "[nf-core/circrna] error: Cannot find bam file matching: ${bam_files}"}
+                .set{reads_for_csv}
+    }
 
-//     reads_for_csv
-//                 .map{
+    reads_for_csv
+                .map{
 
-//                 def samples = it[0]
-//                 def read1 = (type == 'bam') ? 'NA' : return_file(it[1][0])
-//                 def read2 = (type == 'bam') ? 'NA' : return_file(it[1][1])
-//                 def bam =   (type == 'fastq') ? 'NA' : return_file(it[1][0])
+                def samples = it[0]
+                def read1 = (type == 'bam') ? 'NA' : return_file(it[1][0])
+                def read2 = (type == 'bam') ? 'NA' : return_file(it[1][1])
+                def bam =   (type == 'fastq') ? 'NA' : return_file(it[1][0])
 
-//                 if(bam.matches('NA')){
-//                     [ samples, [read1, read2] ]
-//                 }else{
-//                     [ samples, bam ]
-//                 }
+                if(bam.matches('NA')){
+                    [ samples, [read1, read2] ]
+                }else{
+                    [ samples, bam ]
+                }
 
-//                 }
-//                 .ifEmpty{exit 1, "[nf-core/circrna] error: Invalid file paths with --input"}
-// }
-
-
-// // Check input phenotype file
-
-// def examine_phenotype(pheno){
-
-//   Channel
-//         .fromPath(pheno)
-//         .splitCsv(header: true, sep: ',')
-//         .map{ row ->
-
-//         def expected_cols = ['condition']
-
-//         if (!row.keySet().containsAll(expected_cols)) exit 1, "[nf-core/circrna] error: 'condition' is not a column name in the phenotype file.\n\nThe response variable must be named 'condition', please refer to the usage documentation online"
-
-//         def condition  = row.condition.matches('NA') ? 'NA' : row.condition
-
-//         if(condition == '') exit 1, "[nf-core/circrna] error: Invalid phenotype file, condition column contains empty cells."
-//         if(condition.matches('NA')) exit 1, "[nf-core/circrna] error: NA value in phenotype condition column."
-
-//         }
-//         .toList()
-
-//         return Channel.value(file(pheno))
-// }
-
-// /*
-// ================================================================================
-//                             nf-core functions
-// ================================================================================
-// */
-
-// workflow.onError {
-//     // Print unexpected parameters - easiest is to just rerun validation
-//     NfcoreSchema.validateParameters(params, json_schema, log)
-// }
-
-// def nfcoreHeader() {
-//     // Log colors ANSI codes
-//     c_black = params.monochrome_logs ? '' : "\033[0;30m";
-//     c_blue = params.monochrome_logs ? '' : "\033[0;34m";
-//     c_cyan = params.monochrome_logs ? '' : "\033[0;36m";
-//     c_dim = params.monochrome_logs ? '' : "\033[2m";
-//     c_green = params.monochrome_logs ? '' : "\033[0;32m";
-//     c_purple = params.monochrome_logs ? '' : "\033[0;35m";
-//     c_reset = params.monochrome_logs ? '' : "\033[0m";
-//     c_white = params.monochrome_logs ? '' : "\033[0;37m";
-//     c_yellow = params.monochrome_logs ? '' : "\033[0;33m";
-
-//     return """    -${c_dim}--------------------------------------------------${c_reset}-
-//                                             ${c_green},--.${c_black}/${c_green},-.${c_reset}
-//     ${c_blue}        ___     __   __   __   ___     ${c_green}/,-._.--~\'${c_reset}
-//     ${c_blue}  |\\ | |__  __ /  ` /  \\ |__) |__         ${c_yellow}}  {${c_reset}
-//     ${c_blue}  | \\| |       \\__, \\__/ |  \\ |___     ${c_green}\\`-._,-`-,${c_reset}
-//                                             ${c_green}`._,._,\'${c_reset}
-//     ${c_purple}  nf-core/circrna v${workflow.manifest.version}${c_reset}
-//     -${c_dim}--------------------------------------------------${c_reset}-
-//     """.stripIndent()
-// }
-
-// // handle multiqc_channels
-// //if(params.trim_fastq == false){
-// //    ch_multiqc_report = multiqc_trim_out
-// //}else{
-// //    ch_multiqc_report = multiqc_raw_out
-// //}
-
-// // Completion e-mail notification
-// workflow.onComplete {
-
-//     // Set up the e-mail variables
-//     def subject = "[nf-core/circrna] Successful: $workflow.runName"
-//     if (!workflow.success) {
-//         subject = "[nf-core/circrna] FAILED: $workflow.runName"
-//     }
-//     def email_fields = [:]
-//     email_fields['version'] = workflow.manifest.version
-//     email_fields['runName'] = custom_runName ?: workflow.runName
-//     email_fields['success'] = workflow.success
-//     email_fields['dateComplete'] = workflow.complete
-//     email_fields['duration'] = workflow.duration
-//     email_fields['exitStatus'] = workflow.exitStatus
-//     email_fields['errorMessage'] = (workflow.errorMessage ?: 'None')
-//     email_fields['errorReport'] = (workflow.errorReport ?: 'None')
-//     email_fields['commandLine'] = workflow.commandLine
-//     email_fields['projectDir'] = workflow.projectDir
-//     email_fields['summary'] = summary
-//     email_fields['summary']['Date Started'] = workflow.start
-//     email_fields['summary']['Date Completed'] = workflow.complete
-//     email_fields['summary']['Pipeline script file path'] = workflow.scriptFile
-//     email_fields['summary']['Pipeline script hash ID'] = workflow.scriptId
-//     if (workflow.repository) email_fields['summary']['Pipeline repository Git URL'] = workflow.repository
-//     if (workflow.commitId) email_fields['summary']['Pipeline repository Git Commit'] = workflow.commitId
-//     if (workflow.revision) email_fields['summary']['Pipeline Git branch/tag'] = workflow.revision
-//     email_fields['summary']['Nextflow Version'] = workflow.nextflow.version
-//     email_fields['summary']['Nextflow Build'] = workflow.nextflow.build
-//     email_fields['summary']['Nextflow Compile Timestamp'] = workflow.nextflow.timestamp
-
-//     // On success try attach the multiqc report
-//     def mqc_report = null
-//     try {
-//         if (workflow.success) {
-//             mqc_report = ch_multiqc_report.getVal()
-//             if (mqc_report.getClass() == ArrayList) {
-//                 log.warn "[nf-core/circrna] Found multiple reports from process 'multiqc', will use only one"
-//                 mqc_report = mqc_report[0]
-//             }
-//         }
-//     } catch (all) {
-//         log.warn "[nf-core/circrna] Could not attach MultiQC report to summary email"
-//     }
-
-//     // Check if we are only sending emails on failure
-//     email_address = params.email
-//     if (!params.email && params.email_on_fail && !workflow.success) {
-//         email_address = params.email_on_fail
-//     }
-
-//     // Render the TXT template
-//     def engine = new groovy.text.GStringTemplateEngine()
-//     def tf = new File("$workflow.projectDir/assets/email_template.txt")
-//     def txt_template = engine.createTemplate(tf).make(email_fields)
-//     def email_txt = txt_template.toString()
-
-//     // Render the HTML template
-//     def hf = new File("$workflow.projectDir/assets/email_template.html")
-//     def html_template = engine.createTemplate(hf).make(email_fields)
-//     def email_html = html_template.toString()
-
-//     // Render the sendmail template
-//     def smail_fields = [ email: email_address, subject: subject, email_txt: email_txt, email_html: email_html, projectDir: "$workflow.projectDir", mqcFile: mqc_report, mqcMaxSize: params.max_multiqc_email_size.toBytes() ]
-//     def sf = new File("$workflow.projectDir/assets/sendmail_template.txt")
-//     def sendmail_template = engine.createTemplate(sf).make(smail_fields)
-//     def sendmail_html = sendmail_template.toString()
-
-//     // Send the HTML e-mail
-//     if (email_address) {
-//         try {
-//             if (params.plaintext_email) { throw GroovyException('Send plaintext e-mail, not HTML') }
-//             // Try to send HTML e-mail using sendmail
-//             [ 'sendmail', '-t' ].execute() << sendmail_html
-//             log.info "[nf-core/circrna] Sent summary e-mail to $email_address (sendmail)"
-//         } catch (all) {
-//             // Catch failures and try with plaintext
-//             def mail_cmd = [ 'mail', '-s', subject, '--content-type=text/html', email_address ]
-//             if ( mqc_report.size() <= params.max_multiqc_email_size.toBytes() ) {
-//             mail_cmd += [ '-A', mqc_report ]
-//             }
-//             mail_cmd.execute() << email_html
-//             log.info "[nf-core/circrna] Sent summary e-mail to $email_address (mail)"
-//         }
-//     }
-
-//     // Write summary e-mail HTML to a file
-//     def output_d = new File("${params.outdir}/pipeline_info/")
-//     if (!output_d.exists()) {
-//         output_d.mkdirs()
-//     }
-//     def output_hf = new File(output_d, "pipeline_report.html")
-//     output_hf.withWriter { w -> w << email_html }
-//     def output_tf = new File(output_d, "pipeline_report.txt")
-//     output_tf.withWriter { w -> w << email_txt }
-
-//     c_green  = params.monochrome_logs ? '' : "\033[0;32m";
-//     c_purple = params.monochrome_logs ? '' : "\033[0;35m";
-//     c_red    = params.monochrome_logs ? '' : "\033[0;31m";
-//     c_reset  = params.monochrome_logs ? '' : "\033[0m";
-
-//     if (workflow.stats.ignoredCount > 0 && workflow.success) {
-//         log.info "-${c_purple}Warning, pipeline completed, but with errored process(es) ${c_reset}-"
-//         log.info "-${c_red}Number of ignored errored process(es) : ${workflow.stats.ignoredCount} ${c_reset}-"
-//         log.info "-${c_green}Number of successfully ran process(es) : ${workflow.stats.succeedCount} ${c_reset}-"
-//     }
-
-//     if (workflow.success) {
-//         log.info "-${c_purple}[nf-core/circrna]${c_green} Pipeline completed successfully${c_reset}-"
-//     } else {
-//         checkHostname()
-//         log.info "-${c_purple}[nf-core/circrna]${c_red} Pipeline completed with errors${c_reset}-"
-//     }
-// }
+                }
+                .ifEmpty{exit 1, "[nf-core/circrna] error: Invalid file paths with --input"}
+}
 
 
+// Check input phenotype file
 
-// def checkHostname() {
-//     def c_reset = params.monochrome_logs ? '' : "\033[0m"
-//     def c_white = params.monochrome_logs ? '' : "\033[0;37m"
-//     def c_red = params.monochrome_logs ? '' : "\033[1;91m"
-//     def c_yellow_bold = params.monochrome_logs ? '' : "\033[1;93m"
-//     if (params.hostnames) {
-//         def hostname = 'hostname'.execute().text.trim()
-//         params.hostnames.each { prof, hnames ->
-//             hnames.each { hname ->
-//                 if (hostname.contains(hname) && !workflow.profile.contains(prof)) {
-//                     log.error "${c_red}====================================================${c_reset}\n" +
-//                             "  ${c_red}WARNING!${c_reset} You are running with `-profile $workflow.profile`\n" +
-//                             "  but your machine hostname is ${c_white}'$hostname'${c_reset}\n" +
-//                             "  ${c_yellow_bold}It's highly recommended that you use `-profile $prof${c_reset}`\n" +
-//                             "${c_red}====================================================${c_reset}\n"
-//                 }
-//             }
-//         }
-//     }
-// }
+def examine_phenotype(pheno){
+
+  Channel
+        .fromPath(pheno)
+        .splitCsv(header: true, sep: ',')
+        .map{ row ->
+
+        def expected_cols = ['condition']
+
+        if (!row.keySet().containsAll(expected_cols)) exit 1, "[nf-core/circrna] error: 'condition' is not a column name in the phenotype file.\n\nThe response variable must be named 'condition', please refer to the usage documentation online"
+
+        def condition  = row.condition.matches('NA') ? 'NA' : row.condition
+
+        if(condition == '') exit 1, "[nf-core/circrna] error: Invalid phenotype file, condition column contains empty cells."
+        if(condition.matches('NA')) exit 1, "[nf-core/circrna] error: NA value in phenotype condition column."
+
+        }
+        .toList()
+
+        return Channel.value(file(pheno))
+}
+
+/*
+================================================================================
+                            nf-core functions
+================================================================================
+*/
+
+workflow.onError {
+    // Print unexpected parameters - easiest is to just rerun validation
+    NfcoreSchema.validateParameters(params, json_schema, log)
+}
+
+def nfcoreHeader() {
+    // Log colors ANSI codes
+    c_black = params.monochrome_logs ? '' : "\033[0;30m";
+    c_blue = params.monochrome_logs ? '' : "\033[0;34m";
+    c_cyan = params.monochrome_logs ? '' : "\033[0;36m";
+    c_dim = params.monochrome_logs ? '' : "\033[2m";
+    c_green = params.monochrome_logs ? '' : "\033[0;32m";
+    c_purple = params.monochrome_logs ? '' : "\033[0;35m";
+    c_reset = params.monochrome_logs ? '' : "\033[0m";
+    c_white = params.monochrome_logs ? '' : "\033[0;37m";
+    c_yellow = params.monochrome_logs ? '' : "\033[0;33m";
+
+    return """    -${c_dim}--------------------------------------------------${c_reset}-
+                                            ${c_green},--.${c_black}/${c_green},-.${c_reset}
+    ${c_blue}        ___     __   __   __   ___     ${c_green}/,-._.--~\'${c_reset}
+    ${c_blue}  |\\ | |__  __ /  ` /  \\ |__) |__         ${c_yellow}}  {${c_reset}
+    ${c_blue}  | \\| |       \\__, \\__/ |  \\ |___     ${c_green}\\`-._,-`-,${c_reset}
+                                            ${c_green}`._,._,\'${c_reset}
+    ${c_purple}  nf-core/circrna v${workflow.manifest.version}${c_reset}
+    -${c_dim}--------------------------------------------------${c_reset}-
+    """.stripIndent()
+}
+
+// handle multiqc_channels
+//if(params.trim_fastq == false){
+//    ch_multiqc_report = multiqc_trim_out
+//}else{
+//    ch_multiqc_report = multiqc_raw_out
+//}
+
+// Completion e-mail notification
+workflow.onComplete {
+
+    // Set up the e-mail variables
+    def subject = "[nf-core/circrna] Successful: $workflow.runName"
+    if (!workflow.success) {
+        subject = "[nf-core/circrna] FAILED: $workflow.runName"
+    }
+    def email_fields = [:]
+    email_fields['version'] = workflow.manifest.version
+    email_fields['runName'] = custom_runName ?: workflow.runName
+    email_fields['success'] = workflow.success
+    email_fields['dateComplete'] = workflow.complete
+    email_fields['duration'] = workflow.duration
+    email_fields['exitStatus'] = workflow.exitStatus
+    email_fields['errorMessage'] = (workflow.errorMessage ?: 'None')
+    email_fields['errorReport'] = (workflow.errorReport ?: 'None')
+    email_fields['commandLine'] = workflow.commandLine
+    email_fields['projectDir'] = workflow.projectDir
+    email_fields['summary'] = summary
+    email_fields['summary']['Date Started'] = workflow.start
+    email_fields['summary']['Date Completed'] = workflow.complete
+    email_fields['summary']['Pipeline script file path'] = workflow.scriptFile
+    email_fields['summary']['Pipeline script hash ID'] = workflow.scriptId
+    if (workflow.repository) email_fields['summary']['Pipeline repository Git URL'] = workflow.repository
+    if (workflow.commitId) email_fields['summary']['Pipeline repository Git Commit'] = workflow.commitId
+    if (workflow.revision) email_fields['summary']['Pipeline Git branch/tag'] = workflow.revision
+    email_fields['summary']['Nextflow Version'] = workflow.nextflow.version
+    email_fields['summary']['Nextflow Build'] = workflow.nextflow.build
+    email_fields['summary']['Nextflow Compile Timestamp'] = workflow.nextflow.timestamp
+
+    // On success try attach the multiqc report
+    def mqc_report = null
+    try {
+        if (workflow.success) {
+            mqc_report = ch_multiqc_report.getVal()
+            if (mqc_report.getClass() == ArrayList) {
+                log.warn "[nf-core/circrna] Found multiple reports from process 'multiqc', will use only one"
+                mqc_report = mqc_report[0]
+            }
+        }
+    } catch (all) {
+        log.warn "[nf-core/circrna] Could not attach MultiQC report to summary email"
+    }
+
+    // Check if we are only sending emails on failure
+    email_address = params.email
+    if (!params.email && params.email_on_fail && !workflow.success) {
+        email_address = params.email_on_fail
+    }
+
+    // Render the TXT template
+    def engine = new groovy.text.GStringTemplateEngine()
+    def tf = new File("$workflow.projectDir/assets/email_template.txt")
+    def txt_template = engine.createTemplate(tf).make(email_fields)
+    def email_txt = txt_template.toString()
+
+    // Render the HTML template
+    def hf = new File("$workflow.projectDir/assets/email_template.html")
+    def html_template = engine.createTemplate(hf).make(email_fields)
+    def email_html = html_template.toString()
+
+    // Render the sendmail template
+    def smail_fields = [ email: email_address, subject: subject, email_txt: email_txt, email_html: email_html, projectDir: "$workflow.projectDir", mqcFile: mqc_report, mqcMaxSize: params.max_multiqc_email_size.toBytes() ]
+    def sf = new File("$workflow.projectDir/assets/sendmail_template.txt")
+    def sendmail_template = engine.createTemplate(sf).make(smail_fields)
+    def sendmail_html = sendmail_template.toString()
+
+    // Send the HTML e-mail
+    if (email_address) {
+        try {
+            if (params.plaintext_email) { throw GroovyException('Send plaintext e-mail, not HTML') }
+            // Try to send HTML e-mail using sendmail
+            [ 'sendmail', '-t' ].execute() << sendmail_html
+            log.info "[nf-core/circrna] Sent summary e-mail to $email_address (sendmail)"
+        } catch (all) {
+            // Catch failures and try with plaintext
+            def mail_cmd = [ 'mail', '-s', subject, '--content-type=text/html', email_address ]
+            if ( mqc_report.size() <= params.max_multiqc_email_size.toBytes() ) {
+            mail_cmd += [ '-A', mqc_report ]
+            }
+            mail_cmd.execute() << email_html
+            log.info "[nf-core/circrna] Sent summary e-mail to $email_address (mail)"
+        }
+    }
+
+    // Write summary e-mail HTML to a file
+    def output_d = new File("${params.outdir}/pipeline_info/")
+    if (!output_d.exists()) {
+        output_d.mkdirs()
+    }
+    def output_hf = new File(output_d, "pipeline_report.html")
+    output_hf.withWriter { w -> w << email_html }
+    def output_tf = new File(output_d, "pipeline_report.txt")
+    output_tf.withWriter { w -> w << email_txt }
+
+    c_green  = params.monochrome_logs ? '' : "\033[0;32m";
+    c_purple = params.monochrome_logs ? '' : "\033[0;35m";
+    c_red    = params.monochrome_logs ? '' : "\033[0;31m";
+    c_reset  = params.monochrome_logs ? '' : "\033[0m";
+
+    if (workflow.stats.ignoredCount > 0 && workflow.success) {
+        log.info "-${c_purple}Warning, pipeline completed, but with errored process(es) ${c_reset}-"
+        log.info "-${c_red}Number of ignored errored process(es) : ${workflow.stats.ignoredCount} ${c_reset}-"
+        log.info "-${c_green}Number of successfully ran process(es) : ${workflow.stats.succeedCount} ${c_reset}-"
+    }
+
+    if (workflow.success) {
+        log.info "-${c_purple}[nf-core/circrna]${c_green} Pipeline completed successfully${c_reset}-"
+    } else {
+        checkHostname()
+        log.info "-${c_purple}[nf-core/circrna]${c_red} Pipeline completed with errors${c_reset}-"
+    }
+}
+
+
+
+def checkHostname() {
+    def c_reset = params.monochrome_logs ? '' : "\033[0m"
+    def c_white = params.monochrome_logs ? '' : "\033[0;37m"
+    def c_red = params.monochrome_logs ? '' : "\033[1;91m"
+    def c_yellow_bold = params.monochrome_logs ? '' : "\033[1;93m"
+    if (params.hostnames) {
+        def hostname = 'hostname'.execute().text.trim()
+        params.hostnames.each { prof, hnames ->
+            hnames.each { hname ->
+                if (hostname.contains(hname) && !workflow.profile.contains(prof)) {
+                    log.error "${c_red}====================================================${c_reset}\n" +
+                            "  ${c_red}WARNING!${c_reset} You are running with `-profile $workflow.profile`\n" +
+                            "  but your machine hostname is ${c_white}'$hostname'${c_reset}\n" +
+                            "  ${c_yellow_bold}It's highly recommended that you use `-profile $prof${c_reset}`\n" +
+                            "${c_red}====================================================${c_reset}\n"
+                }
+            }
+        }
+    }
+}
