@@ -389,6 +389,7 @@ getDESeqDEAbyContrast <- function(dds, contrast, reference, var, outdir, inputda
     write.table(down_regulated, file.path(dir, paste("DESeq2", contrast, "down_regulated_differential_expression.txt", sep="_")), sep="\t", row.names=F, quote=F)
 
     res_df <- as.data.frame(res)
+    write.table(res_df, file.path(dir, paste("DESeq2", contrast, "whole_differential_expression.txt", sep="_")), sep="\t", row.names=F, quote=F)
 
     #if(outdir == "RNA-Seq/"){
     #    ann_res <- ens2symbol(res_df, inputdata)
