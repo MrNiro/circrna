@@ -14,7 +14,7 @@ if __name__ == '__main__':
         dirs.sort()
         for d in dirs:
             line = d + ","
-            cur_path = data_folder + d
+            cur_path = data_folder + d + "/"
             for dpath, _, filenames in os.walk(cur_path):
                 filenames.sort()
                 for f_name in filenames:
