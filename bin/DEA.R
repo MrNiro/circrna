@@ -330,19 +330,17 @@ DESeq2 <- function(inputdata, data_type){
         design = inputdata$design)
 
         levels <- as.character(unique(inputdata$pheno$condition))
-        for(level in levels){
-            reference <- level
-            contrasts <- levels[levels != paste0(reference)]
-            dds$condition <- relevel(dds$condition, ref = paste0(reference))
-            dds <- DESeq(dds, quiet=TRUE)
-            sizeFactors(dds) <- sizefactors
+        reference <- "CTRL"
+        contrasts <- levels[levels != paste0(reference)]
+        dds$condition <- relevel(dds$condition, ref = paste0(reference))
+        dds <- DESeq(dds, quiet=TRUE)
+        sizeFactors(dds) <- sizefactors
 
-            DESeq2_plots(dds, outdir)
+        DESeq2_plots(dds, outdir)
 
-            for(var in contrasts){
-                contrast <- paste(var, "vs", reference, sep="_")
-                DEG <- getDESeqDEAbyContrast(dds, contrast, reference, var, outdir)
-            }
+        for(var in contrasts){
+            contrast <- paste(var, "vs", reference, sep="_")
+            DEG <- getDESeqDEAbyContrast(dds, contrast, reference, var, outdir)
         }
     }else{
         giveError("Data type not provided correctly, check end of script")
