@@ -298,19 +298,19 @@ DESeq2 <- function(inputdata, data_type){
         design = inputdata$design)
 
         levels <- as.character(unique(inputdata$pheno$condition))
-        for(level in levels){
-            reference <- level
-            contrasts <- levels[levels != paste0(reference)]
-            dds$condition <- relevel(dds$condition, ref = paste0(reference))
-            dds <- DESeq(dds, quiet=TRUE)
+        # for(level in levels){
+        reference <- "CTRL"
+        contrasts <- levels[levels != paste0(reference)]
+        dds$condition <- relevel(dds$condition, ref = paste0(reference))
+        dds <- DESeq(dds, quiet=TRUE)
 
-            DESeq2_plots(dds, outdir)
+        DESeq2_plots(dds, outdir)
 
-            for(var in contrasts){
-                contrast <- paste(var, "vs", reference, sep="_")
-                DEG <- getDESeqDEAbyContrast(dds, contrast, reference, var, outdir, inputdata)
-            }
+        for(var in contrasts){
+            contrast <- paste(var, "vs", reference, sep="_")
+            DEG <- getDESeqDEAbyContrast(dds, contrast, reference, var, outdir, inputdata)
         }
+        # }
     }else if(data_type == "circRNA"){
         outdir <- "circRNA/"
 
@@ -389,7 +389,9 @@ getDESeqDEAbyContrast <- function(dds, contrast, reference, var, outdir, inputda
     write.table(down_regulated, file.path(dir, paste("DESeq2", contrast, "down_regulated_differential_expression.txt", sep="_")), sep="\t", row.names=F, quote=F)
 
     res_df <- as.data.frame(res)
-    write.table(res_df, file.path(dir, paste("DESeq2", contrast, "whole_differential_expression.txt", sep="_")), sep="\t", row.names=F, quote=F)
+    out_res_df <- tibble::rownames_to_column(res_df, "ID")
+    write.table(out_res_df, file.path(dir, paste("DESeq2", contrast, "whole_differential_expression.txt", sep="_")), sep="\t", row.names=F, quote=F)
+    write.table(res, file.path(dir, paste("DESeq2", contrast, "RES_differential_expression.txt", sep="_")), sep="\t", row.names=F, quote=F)
 
     #if(outdir == "RNA-Seq/"){
     #    ann_res <- ens2symbol(res_df, inputdata)
