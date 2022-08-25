@@ -1736,7 +1736,6 @@ process HISAT_ALIGN{
         hisat2 -p ${task.cpus} --dta -q -x ${fasta.baseName} -U ${fastq[0]} -t | samtools view -bS - | samtools sort --threads ${task.cpus} -m 2G - > ${base}.bam
         """
     }
-
 }
 
 process STRINGTIE{
