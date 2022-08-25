@@ -53,10 +53,12 @@ get_args <- function(){
 
 }
 
+
 giveError <- function(message){
     cat(paste("\n", message, sep=""))
     quit()
 }
+
 
 usage <- function(){giveError("USAGE: DEA.R <gene_counts.csv> <phenotype.txt> <circRNA_matrix.txt> <species id> <ensembl_map>")}
 
@@ -96,7 +98,7 @@ stage_data <- function(gene_counts, phenotype, circRNA, species, map){
     inputdata$species <- species
     inputdata$map <- dbmap
 
-    inputdata$gene <- ens2symbol(inputdata$gene, inputdata)
+    # inputdata$gene <- ens2symbol(inputdata$gene, inputdata)
 
     return(inputdata)
 }
@@ -150,7 +152,6 @@ checkinputdata <- function(phenotype){
 }
 
 
-
 makedesign <- function(phenotype){
 
     # Covariates i.e explanatory variables.
@@ -159,8 +160,6 @@ makedesign <- function(phenotype){
     return(design)
 
 }
-
-
 
 
 ens2symbol <- function(mat, inputdata){
@@ -230,6 +229,7 @@ ens2symbol <- function(mat, inputdata){
 
 }
 
+
 get_upregulated <- function(df){
 
     key <- intersect(rownames(df)[which(df$log2FoldChange>=1)], rownames(df)[which(df$pvalue<=0.05)])
@@ -237,6 +237,7 @@ get_upregulated <- function(df){
     return(results)
 
 }
+
 
 get_downregulated <- function(df){
 
@@ -286,6 +287,7 @@ annotate_de_genes <- function(df, inputdata){
 
 }
 
+
 # Data type provided at end of script to activate RNA-Seq / circRNA analysis.
 DESeq2 <- function(inputdata, data_type){
 
@@ -298,7 +300,6 @@ DESeq2 <- function(inputdata, data_type){
         design = inputdata$design)
 
         levels <- as.character(unique(inputdata$pheno$condition))
-        # for(level in levels){
         reference <- "CTRL"
         contrasts <- levels[levels != paste0(reference)]
         dds$condition <- relevel(dds$condition, ref = paste0(reference))
@@ -310,7 +311,6 @@ DESeq2 <- function(inputdata, data_type){
             contrast <- paste(var, "vs", reference, sep="_")
             DEG <- getDESeqDEAbyContrast(dds, contrast, reference, var, outdir, inputdata)
         }
-        # }
     }else if(data_type == "circRNA"){
         outdir <- "circRNA/"
 
@@ -321,7 +321,7 @@ DESeq2 <- function(inputdata, data_type){
         design = inputdata$design)
         tmp <- DESeq(tmp, quiet=TRUE)
 
-        sizefactors <- sizeFactors(tmp)
+        sizefactors <- sizeFactors(tmp)     # TO NORMALIZ
         rm(tmp)
 
         dds <- DESeqDataSetFromMatrix(
@@ -374,8 +374,8 @@ getDESeqDEAbyContrast <- function(dds, contrast, reference, var, outdir, inputda
     global_heatmap(de, log2, contrast, outdir)
 
     if(outdir == "RNA-Seq/"){
-        up_regulated <- annotate_de_genes(up_regulated, inputdata)
-        down_regulated <- annotate_de_genes(down_regulated, inputdata)
+        up_regulated <- tibble::rownames_to_column(up_regulated, "gene_id")
+        down_regulated <- tibble::rownames_to_column(down_regulated, "gene_id")
     }else{
         up_regulated <- tibble::rownames_to_column(up_regulated, "ID")
         down_regulated <- tibble::rownames_to_column(down_regulated, "ID")
@@ -386,16 +386,8 @@ getDESeqDEAbyContrast <- function(dds, contrast, reference, var, outdir, inputda
     write.table(up_regulated, file.path(dir, paste("DESeq2", contrast, "up_regulated_differential_expression.txt", sep="_")), sep="\t", row.names=F, quote=F)
     write.table(down_regulated, file.path(dir, paste("DESeq2", contrast, "down_regulated_differential_expression.txt", sep="_")), sep="\t", row.names=F, quote=F)
 
-    res_df <- as.data.frame(res)
     out_res_df <- tibble::rownames_to_column(res_df, "ID")
     write.table(out_res_df, file.path(dir, paste("DESeq2", contrast, "whole_differential_expression.txt", sep="_")), sep="\t", row.names=F, quote=F)
-    write.table(res, file.path(dir, paste("DESeq2", contrast, "RES_differential_expression.txt", sep="_")), sep="\t", row.names=F, quote=F)
-
-    #if(outdir == "RNA-Seq/"){
-    #    ann_res <- ens2symbol(res_df, inputdata)
-    #}else{
-    #    ann_res <- res_df
-    #}
 
     volcano_plot(res_df, contrast, outdir)
 
@@ -420,7 +412,6 @@ getDESeqDEAbyContrast <- function(dds, contrast, reference, var, outdir, inputda
 
 
 DESeq2_plots <- function(dds, outdir){
-
     dir.create("DESeq2_QC")
     dir.create(paste("DESeq2_QC/", outdir, sep=""))
     dir=paste("DESeq2_QC/", outdir, sep="")
@@ -430,14 +421,8 @@ DESeq2_plots <- function(dds, outdir){
     dev.off()
 
     counts <- counts(dds, normalized=T)
-
-    if(outdir == "RNA-Seq/"){
-        counts <- ens2symbol(counts, inputdata)
-        log2 <- log2(counts + 1)
-    }else{
-        counts <- as.data.frame(counts)
-        log2 <- log2(counts + 1)
-    }
+    counts <- as.data.frame(counts)
+    log2 <- log2(counts + 1)
 
     write_counts <- tibble::rownames_to_column(counts, "ID")
     write_log2 <- tibble::rownames_to_column(log2, "ID")
@@ -448,7 +433,6 @@ DESeq2_plots <- function(dds, outdir){
     sample_to_sample_heatmap(log2, outdir)
     sample_to_sample_dendogram(log2, outdir)
     PCA_plot(log2, outdir)
-
 }
 
 
@@ -460,6 +444,7 @@ ma_plot <- function(res, contrast, outdir){
     dev.off()
 
 }
+
 
 sample_to_sample_heatmap <- function(log2, outdir){
 
@@ -478,7 +463,6 @@ sample_to_sample_heatmap <- function(log2, outdir){
     dev.off()
 
 }
-
 
 
 sample_to_sample_dendogram <- function(log2, outdir){
@@ -599,7 +583,6 @@ global_heatmap <- function(de, log2, contrast, outdir){
     dev.off()
 
 }
-
 
 
 make_boxplots <- function(de, cts, contrast){

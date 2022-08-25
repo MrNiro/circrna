@@ -1781,8 +1781,8 @@ process DEA{
     output:
     file("RNA-Seq") into rnaseq_dir
     file("circRNA") into circrna_dir
-    file("boxplots") into boxplots_dir
-    file("DESeq2_QC") into qc_plots
+    // file("boxplots") into boxplots_dir
+    // file("DESeq2_QC") into qc_plots
 
     script:
     """
