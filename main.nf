@@ -720,6 +720,7 @@ process FASTQC_RAW {
     """
 }
 
+
 /*
 ================================================================================
                                     BBDUK
@@ -850,7 +851,7 @@ process CIRIQUANT{
     """
 }
 
-process STAR_1PASS{
+process STAR{
     tag "${base}"
     label 'process_high'
     publishDir params.outdir, mode: params.publish_dir_mode, pattern: "${base}",
@@ -864,97 +865,17 @@ process STAR_1PASS{
     file(star_idx) from ch_star
 
     output:
-    file("${base}/*SJ.out.tab") into sjdb_ch
-    file("${base}") into star_1st_pass_output
-
-    script:
-    def readFilesCommand = reads[0].toString().endsWith('.gz') ? "--readFilesCommand zcat" : ''
-    """
-    mkdir -p ${base}
-
-    STAR \\
-        --alignIntronMax ${params.alignIntronMax} \\
-        --alignIntronMin ${params.alignIntronMin} \\
-        --alignMatesGapMax ${params.alignMatesGapMax} \\
-        --alignSJDBoverhangMin ${params.alignSJDBoverhangMin} \\
-        --alignSJoverhangMin ${params.alignSJoverhangMin} \\
-        --alignSoftClipAtReferenceEnds ${params.alignSoftClipAtReferenceEnds} \\
-        --alignTranscriptsPerReadNmax ${params.alignTranscriptsPerReadNmax} \\
-        --chimJunctionOverhangMin ${params.chimJunctionOverhangMin} \\
-        --chimOutType Junctions SeparateSAMold \\
-        --chimScoreMin ${params.chimScoreMin} \\
-        --chimScoreSeparation ${params.chimScoreSeparation} \\
-        --chimSegmentMin ${params.chimSegmentMin} \\
-        --genomeDir ${star_idx} \\
-        --genomeLoad ${params.genomeLoad} \\
-        --limitSjdbInsertNsj ${params.limitSjdbInsertNsj} \\
-        --outFileNamePrefix ${base}/${base}. \\
-        --outFilterMatchNminOverLread ${params.outFilterMatchNminOverLread} \\
-        --outFilterMismatchNoverLmax ${params.outFilterMismatchNoverLmax} \\
-        --outFilterMultimapNmax ${params.outFilterMultimapNmax} \\
-        --outFilterMultimapScoreRange ${params.outFilterMultimapScoreRange} \\
-        --outFilterScoreMinOverLread ${params.outFilterScoreMinOverLread} \\
-        --outFilterType BySJout \\
-        --outReadsUnmapped None \\
-        --outSAMtype BAM SortedByCoordinate \\
-        --outSAMunmapped Within \\
-        --outSJfilterOverhangMin ${params.outSJfilterOverhangMin} \\
-        ${readFilesCommand} \\
-        --readFilesIn ${reads} \\
-        --runThreadN ${task.cpus} \\
-        --sjdbScore ${params.sjdbScore} \\
-        --winAnchorMultimapNmax ${params.winAnchorMultimapNmax}
-    """
-}
-
-process SJDB_FILE{
-    tag "${sjdb}"
-    publishDir params.outdir, mode: params.publish_dir_mode,
-        saveAs: { params.save_quantification_intermediates ? "circrna_discovery/STAR/SJFile/${it}" : null }
-
-    when:
-    ('circexplorer2' in tool || 'circrna_finder' in tool || 'dcc' in tool) && 'circrna_discovery' in module
-
-    input:
-    file(sjdb) from sjdb_ch
-
-    output:
-    file("*SJFile.tab") into sjdbfile_ch
-
-    shell:
-    '''
-    base=$(basename !{sjdb} .SJ.out.tab)
-    awk 'BEGIN {OFS="\t"; strChar[0]="."; strChar[1]="+"; strChar[2]="-";} {if($5>0){print $1,$2,$3,strChar[$4]}}' !{sjdb} > ${base}.SJFile.tab
-    '''
-}
-
-(sjdbfile_pass2, sjdbfile_mate1, sjdbfile_mate2) = sjdbfile_ch.into(3)
-
-process STAR_2PASS{
-    tag "${base}"
-    label 'process_high'
-    publishDir params.outdir, mode: params.publish_dir_mode, pattern: "${base}",
-        saveAs: { params.save_quantification_intermediates ? "circrna_discovery/STAR/2nd_Pass/${it}" : null }
-
-    when:
-    ('circexplorer2' in tool || 'circrna_finder' in tool || 'dcc' in tool) && 'circrna_discovery' in module
-
-    input:
-    tuple val(base), file(reads) from star_pass2_reads
-    file(sjdbfile) from sjdbfile_pass2.collect()
-    file(star_idx) from ch_star
-
-    output:
     tuple val(base), file("${base}/${base}.Chimeric.out.junction") into circexplorer2_input
     tuple val(base), file("${base}") into circrna_finder_input, dcc_pairs
 
-
     script:
     def readFilesCommand = reads[0].toString().endsWith('.gz') ? "--readFilesCommand zcat" : ''
     """
     mkdir -p ${base}
 
+
     STAR \\
+        --twopassMode Basic \\
         --alignIntronMax ${params.alignIntronMax} \\
         --alignIntronMin ${params.alignIntronMin} \\
         --alignMatesGapMax ${params.alignMatesGapMax} \\
@@ -985,7 +906,6 @@ process STAR_2PASS{
         ${readFilesCommand} \\
         --readFilesIn ${reads} \\
         --runThreadN ${task.cpus} \\
-        --sjdbFileChrStartEnd ${sjdbfile} \\
         --sjdbScore ${params.sjdbScore} \\
         --winAnchorMultimapNmax ${params.winAnchorMultimapNmax}
     """
@@ -1781,7 +1701,7 @@ process DEA{
     output:
     file("RNA-Seq") into rnaseq_dir
     file("circRNA") into circrna_dir
-    // file("boxplots") into boxplots_dir
+    file("boxplots") into boxplots_dir
     // file("DESeq2_QC") into qc_plots
 
     script:
