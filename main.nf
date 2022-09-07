@@ -889,7 +889,6 @@ process STAR{
         --chimScoreSeparation ${params.chimScoreSeparation} \\
         --chimSegmentMin ${params.chimSegmentMin} \\
         --genomeDir ${star_idx} \\
-        --genomeLoad ${params.genomeLoad} \\
         --limitSjdbInsertNsj ${params.limitSjdbInsertNsj} \\
         --outFileNamePrefix ${base}/${base}. \\
         --outFilterMatchNminOverLread ${params.outFilterMatchNminOverLread} \\
