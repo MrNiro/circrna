@@ -726,7 +726,7 @@ process FASTQC_RAW {
                                     TRIM
 ================================================================================
 */
-process TRIM_GALORE{
+process TRIM_GALORE {
     tag "${base}"
     label 'process_medium'
     publishDir params.outdir, mode: params.publish_dir_mode, pattern: "*.fq.gz",
@@ -740,7 +740,7 @@ process TRIM_GALORE{
 
     output:
     tuple val(base), file('*.trim.fq.gz') into trim_reads_ch, fastqc_trim_reads
-    file(*) into trim_results
+    //file(*) into trim_results
 
     script:
     // Check the configs in ./nextflow.config
@@ -775,7 +775,6 @@ process TRIM_GALORE{
         ${fastq[0]}
     """
     }
-
 }
 
 // process BBDUK {
@@ -1027,176 +1026,6 @@ process CIRCRNA_FINDER{
 
     ## Annotation
     awk -v OFS="\t" '{print \$1, \$2, \$3, \$1":"\$2"-"\$3":"\$4, \$5, \$4}' ${base}_circrna_finder.bed > ${base}_circrna_finder_circs.bed
-    """
-}
-
-process DCC_MATE1{
-    tag "${base}"
-    label 'process_high'
-    publishDir params.outdir, mode: params.publish_dir_mode, pattern: "mate1",
-        saveAs: { params.save_quantification_intermediates ? "circrna_discovery/DCC/intermediates/${base}/${it}" : null }
-
-    when:
-    'dcc' in tool && 'circrna_discovery' in module
-
-    input:
-    tuple val(base), file(reads) from dcc_mate1_reads
-    file(sjdbfile) from sjdbfile_mate1.collect()
-    file(star_idx) from ch_star
-
-    output:
-    tuple val(base), file("mate1") into dcc_mate1
-
-    script:
-    def readFilesCommand = reads[0].toString().endsWith('.gz') ? "--readFilesCommand zcat" : ''
-    """
-    mkdir -p mate1
-
-    STAR \\
-        --alignIntronMax ${params.alignIntronMax} \\
-        --alignIntronMin ${params.alignIntronMin} \\
-        --alignMatesGapMax ${params.alignMatesGapMax} \\
-        --alignSJDBoverhangMin ${params.alignSJDBoverhangMin} \\
-        --alignSJoverhangMin ${params.alignSJoverhangMin} \\
-        --alignSoftClipAtReferenceEnds ${params.alignSoftClipAtReferenceEnds} \\
-        --alignTranscriptsPerReadNmax ${params.alignTranscriptsPerReadNmax} \\
-        --chimJunctionOverhangMin ${params.chimJunctionOverhangMin} \\
-        --chimOutType Junctions SeparateSAMold \\
-        --chimScoreMin ${params.chimScoreMin} \\
-        --chimScoreSeparation ${params.chimScoreSeparation} \\
-        --chimSegmentMin ${params.chimSegmentMin} \\
-        --genomeDir ${star_idx} \\
-        --genomeLoad ${params.genomeLoad} \\
-        --limitSjdbInsertNsj ${params.limitSjdbInsertNsj} \\
-        --outFileNamePrefix mate1/${base}. \\
-        --outFilterMatchNminOverLread ${params.outFilterMatchNminOverLread} \\
-        --outFilterMismatchNoverLmax ${params.outFilterMismatchNoverLmax} \\
-        --outFilterMultimapNmax ${params.outFilterMultimapNmax} \\
-        --outFilterMultimapScoreRange ${params.outFilterMultimapScoreRange} \\
-        --outFilterScoreMinOverLread ${params.outFilterScoreMinOverLread} \\
-        --outFilterType BySJout \\
-        --outReadsUnmapped None \\
-        --outSAMtype BAM SortedByCoordinate \\
-        --outSAMunmapped Within \\
-        --outBAMsortingBinsN 150 \\
-        --outSJfilterOverhangMin ${params.outSJfilterOverhangMin} \\
-        ${readFilesCommand} \\
-        --readFilesIn ${reads} \\
-        --runThreadN ${task.cpus} \\
-        --sjdbFileChrStartEnd ${sjdbfile} \\
-        --sjdbScore ${params.sjdbScore} \\
-        --winAnchorMultimapNmax ${params.winAnchorMultimapNmax}
-    """
-}
-
-process DCC_MATE2{
-    tag "${base}"
-    label 'process_high'
-    publishDir params.outdir, mode: params.publish_dir_mode, pattern: "mate2",
-        saveAs: { params.save_quantification_intermediates ? "circrna_discovery/DCC/intermediates/${base}/${it}" : null }
-
-    when:
-    'dcc' in tool && 'circrna_discovery' in module
-
-    input:
-    tuple val(base), file(reads) from dcc_mate2_reads
-    file(sjdbfile) from sjdbfile_mate2.collect()
-    file(star_idx) from ch_star
-
-    output:
-    tuple val(base), file("mate2") into dcc_mate2
-
-    script:
-    def readFilesCommand = reads[0].toString().endsWith('.gz') ? "--readFilesCommand zcat" : ''
-    """
-    mkdir -p mate2
-
-    STAR \\
-        --alignIntronMax ${params.alignIntronMax} \\
-        --alignIntronMin ${params.alignIntronMin} \\
-        --alignMatesGapMax ${params.alignMatesGapMax} \\
-        --alignSJDBoverhangMin ${params.alignSJDBoverhangMin} \\
-        --alignSJoverhangMin ${params.alignSJoverhangMin} \\
-        --alignSoftClipAtReferenceEnds ${params.alignSoftClipAtReferenceEnds} \\
-        --alignTranscriptsPerReadNmax ${params.alignTranscriptsPerReadNmax} \\
-        --chimJunctionOverhangMin ${params.chimJunctionOverhangMin} \\
-        --chimOutType Junctions SeparateSAMold \\
-        --chimScoreMin ${params.chimScoreMin} \\
-        --chimScoreSeparation ${params.chimScoreSeparation} \\
-        --chimSegmentMin ${params.chimSegmentMin} \\
-        --genomeDir ${star_idx} \\
-        --genomeLoad ${params.genomeLoad} \\
-        --limitSjdbInsertNsj ${params.limitSjdbInsertNsj} \\
-        --outFileNamePrefix mate2/${base}. \\
-        --outFilterMatchNminOverLread ${params.outFilterMatchNminOverLread} \\
-        --outFilterMismatchNoverLmax ${params.outFilterMismatchNoverLmax} \\
-        --outFilterMultimapNmax ${params.outFilterMultimapNmax} \\
-        --outFilterMultimapScoreRange ${params.outFilterMultimapScoreRange} \\
-        --outFilterScoreMinOverLread ${params.outFilterScoreMinOverLread} \\
-        --outFilterType BySJout \\
-        --outReadsUnmapped None \\
-        --outSAMtype BAM SortedByCoordinate \\
-        --outSAMunmapped Within \\
-        --outBAMsortingBinsN 150 \\
-        --outSJfilterOverhangMin ${params.outSJfilterOverhangMin} \\
-        ${readFilesCommand} \\
-        --readFilesIn ${reads} \\
-        --runThreadN ${task.cpus} \\
-        --sjdbFileChrStartEnd ${sjdbfile} \\
-        --sjdbScore ${params.sjdbScore} \\
-        --winAnchorMultimapNmax ${params.winAnchorMultimapNmax}
-    """
-}
-
-ch_dcc_dirs = dcc_pairs.join(dcc_mate1).join(dcc_mate2)
-
-process DCC{
-    tag "${base}"
-    label 'py3'
-    label 'process_medium'
-    publishDir params.outdir, mode: params.publish_dir_mode, pattern: "${base}",
-        saveAs: { params.save_quantification_intermediates ? "circrna_discovery/DCC/intermediates/${base}/${it}" : null }
-
-    when:
-    'dcc' in tool && 'circrna_discovery' in module
-
-    input:
-    tuple val(base), file(pairs), file(mate1), file(mate2) from ch_dcc_dirs
-    file(gtf) from ch_gtf
-    file(fasta) from ch_fasta
-
-    output:
-    tuple val(base), file("${base}_dcc.bed") into dcc_results
-    tuple val(base), file("${base}") into dcc_intermediates
-    tuple val(base), val("DCC"), file("${base}_dcc_circs.bed") into dcc_annotated
-
-    script:
-    COJ="Chimeric.out.junction"
-    """
-    sed -i 's/^chr//g' $gtf
-    printf "${base}/${base}.${COJ}" > samplesheet
-    printf "mate1/${base}.${COJ}" > mate1file
-    printf "mate2/${base}.${COJ}" > mate2file
-    DCC @samplesheet -mt1 @mate1file -mt2 @mate2file -D -an $gtf -Pi -ss -F -M -Nr 1 1 -fg -A $fasta -N -T ${task.cpus}
-
-    ## Add strand to counts
-    awk '{print \$6}' CircCoordinates >> strand
-    paste CircRNACount strand | tail -n +2 | awk -v OFS="\t" '{print \$1,\$2,\$3,\$5,\$4}' >> ${base}_dcc.txt
-
-    ## filter reads
-    awk '{if(\$5 >= ${params.bsj_reads}) print \$0}' ${base}_dcc.txt > ${base}_dcc.filtered
-
-    ## fix start position (+1)
-    awk -v OFS="\t" '{\$2-=1;print}' ${base}_dcc.filtered > ${base}_dcc.bed
-
-    mkdir -p ${base}
-    rm strand
-    rm ${base}_dcc.txt
-    rm ${base}_dcc.filtered
-    find . -maxdepth 1 -mindepth 1 -type f -not -name ${base}_dcc.bed -print0 | xargs -0 mv -t ${base}/
-
-    ## Annotation
-    awk -v OFS="\t" '{print \$1, \$2, \$3, \$1":"\$2"-"\$3":"\$4, \$5, \$4}' ${base}_dcc.bed > ${base}_dcc_circs.bed
     """
 }
 
@@ -1788,7 +1617,7 @@ process MULTIQC{
     input:
     file(raw_fastqc) from fastqc_raw.collect().ifEmpty([])
     file(trim_fastqc) from fastqc_trimmed.collect().ifEmpty([])
-    file(trimgalore_stats) from trim_results.collect().ifEmpty([])
+    // file(trimgalore_stats) from trim_results.collect().ifEmpty([])
     file(multiqc_config) from ch_multiqc_config
     file(mqc_custom_config) from ch_multiqc_custom_config.collect().ifEmpty([])
     file('software_versions/*') from software_versions_yaml.collect()
