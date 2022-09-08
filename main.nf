@@ -723,56 +723,107 @@ process FASTQC_RAW {
 
 /*
 ================================================================================
-                                    BBDUK
+                                    TRIM
 ================================================================================
 */
-
-process BBDUK {
+process TRIM_GALORE{
     tag "${base}"
     label 'process_medium'
     publishDir params.outdir, mode: params.publish_dir_mode, pattern: "*.fq.gz",
-        saveAs: { params.save_qc_intermediates ? "quality_control/BBDUK/${it}" : null }
+        saveAs: { params.save_qc_intermediates ? "quality_control/trimgalore/${it}" : null }
 
     when:
     params.trim_fastq
 
     input:
     tuple val(base), file(fastq) from trimming_reads
-    path adapters from params.adapters
 
     output:
     tuple val(base), file('*.trim.fq.gz') into trim_reads_ch, fastqc_trim_reads
-    file("*BBDUK.txt") into bbduk_stats_ch
+    file(*) into trim_results
 
     script:
-    def adapter = params.adapters ? "ref=${params.adapters}" : ''
-    def k = params.k ? "k=${params.k}" : ''
-    def ktrim = params.ktrim ? "ktrim=${params.ktrim}" : ''
-    def hdist = params.hdist ? "hdist=${params.hdist}" : ''
-    def trimq = params.trimq ? "trimq=${params.trimq}" : ''
-    def qtrim = params.qtrim ? "qtrim=${params.qtrim}" : ''
-    def minlen = params.minlen ? "minlen=${params.minlen}" : ''
+    // Check the configs in ./nextflow.config
+    def c_r1   = params.clip_r1 > 0             ? "--clip_r1 ${params.clip_r1}"                         : ''
+    def c_r2   = params.clip_r2 > 0             ? "--clip_r2 ${params.clip_r2}"                         : ''
+    def tpc_r1 = params.three_prime_clip_r1 > 0 ? "--three_prime_clip_r1 ${params.three_prime_clip_r1}" : ''
+    def tpc_r2 = params.three_prime_clip_r2 > 0 ? "--three_prime_clip_r2 ${params.three_prime_clip_r2}" : ''
+
+    if(fastq[1]){
     """
-    bbduk.sh \\
-        -Xmx${task.memory.toGiga()}g \\
-        threads=${task.cpus} \\
-        in1=${fastq[0]} \\
-        in2=${fastq[1]} \\
-        out1=${base}_R1.trim.fq.gz \\
-        out2=${base}_R2.trim.fq.gz \\
-        $adapter \\
-        $k \\
-        $ktrim \\
-        $trimq \\
-        $qtrim \\
-        $minlen \\
-        stats=${base}_BBDUK.txt
+    trim_galore \\
+        --cores ${task.cpus} \\
+        --gzip \\
+        --fastqc \\
+        --paired \\
+        $c_r1 \\
+        $c_r2 \\
+        $tpc_r1 \\
+        $tpc_r2 \\
+        ${fastq[0]} \\
+        ${fastq[1]}
     """
+    }
+    else{
+    """
+    trim_galore \\
+        --cores ${task.cpus} \\
+        --gzip \\
+        --fastqc \\
+        $c_r1 \\
+        $tpc_r1 \\
+        ${fastq[0]}
+    """
+    }
+
 }
+
+// process BBDUK {
+//     tag "${base}"
+//     label 'process_medium'
+//     publishDir params.outdir, mode: params.publish_dir_mode, pattern: "*.fq.gz",
+//         saveAs: { params.save_qc_intermediates ? "quality_control/BBDUK/${it}" : null }
+
+//     when:
+//     params.trim_fastq
+
+//     input:
+//     tuple val(base), file(fastq) from trimming_reads
+//     path adapters from params.adapters
+
+//     output:
+//     tuple val(base), file('*.trim.fq.gz') into trim_reads_ch, fastqc_trim_reads
+//     file("*BBDUK.txt") into bbduk_stats_ch
+
+//     script:
+//     def adapter = params.adapters ? "ref=${params.adapters}" : ''
+//     def k = params.k ? "k=${params.k}" : ''
+//     def ktrim = params.ktrim ? "ktrim=${params.ktrim}" : ''
+//     def hdist = params.hdist ? "hdist=${params.hdist}" : ''
+//     def trimq = params.trimq ? "trimq=${params.trimq}" : ''
+//     def qtrim = params.qtrim ? "qtrim=${params.qtrim}" : ''
+//     def minlen = params.minlen ? "minlen=${params.minlen}" : ''
+//     """
+//     bbduk.sh \\
+//         -Xmx${task.memory.toGiga()}g \\
+//         threads=${task.cpus} \\
+//         in1=${fastq[0]} \\
+//         in2=${fastq[1]} \\
+//         out1=${base}_R1.trim.fq.gz \\
+//         out2=${base}_R2.trim.fq.gz \\
+//         $adapter \\
+//         $k \\
+//         $ktrim \\
+//         $trimq \\
+//         $qtrim \\
+//         $minlen \\
+//         stats=${base}_BBDUK.txt
+//     """
+// }
 
 aligner_reads = params.trim_fastq ? trim_reads_ch : raw_reads
 
-process FASTQC_BBDUK {
+process FASTQC_TRIM {
     tag "${base}"
     label 'process_low'
     label 'py3'
@@ -792,7 +843,7 @@ process FASTQC_BBDUK {
     """
 }
 
-(star_pass1_reads, star_pass2_reads, find_circ_reads, ciriquant_reads, mapsplice_reads, segemehl_reads, dcc_mate1_reads, dcc_mate2_reads, hisat_reads) = aligner_reads.into(9)
+(star_reads, find_circ_reads, ciriquant_reads, mapsplice_reads, segemehl_reads, dcc_mate1_reads, dcc_mate2_reads, hisat_reads) = aligner_reads.into(9)
 
 /*
 ================================================================================
@@ -861,11 +912,12 @@ process STAR{
     ('circexplorer2' in tool || 'circrna_finder' in tool || 'dcc' in tool) && 'circrna_discovery' in module
 
     input:
-    tuple val(base), file(reads) from star_pass1_reads
+    tuple val(base), file(reads) from star_reads
     file(star_idx) from ch_star
 
     output:
     tuple val(base), file("${base}/${base}.Chimeric.out.junction") into circexplorer2_input
+    tuple val(base), file("${base}/${base}.Aligned.sortedByCoord.out.bam") into star_bam
     tuple val(base), file("${base}") into circrna_finder_input, dcc_pairs
 
     script:
@@ -1354,65 +1406,6 @@ process SEGEMEHL_ALIGN{
 ch_circs = ciriquant_annotated.mix(circexplorer2_annotated, dcc_annotated, circrna_finder_annotated, find_circ_annotated, mapsplice_annotated, segemehl_annotated)
 
 
-process ANNOTATION{
-    tag "${base}:${tool}"
-    label 'process_high'
-    publishDir "${params.outdir}/circrna_discovery/${tool}/${base}", mode: params.publish_dir_mode, pattern: "${base}.bed"
-    publishDir "${params.outdir}/circrna_discovery/${tool}/annotation_logs", mode: params.publish_dir_mode, pattern: "${base}.log"
-
-    input:
-    tuple val(base), val(tool), file(circs) from ch_circs
-    file(gtf_filt) from ch_gtf_filtered
-
-    output:
-    tuple val(base), val(tool), file("${base}.bed") into ch_annotation
-    tuple val(base), file("${base}.log") into annotation_logs
-
-    script:
-    """
-    mv $circs circs.bed
-    bash ${workflow.projectDir}/bin/annotate_outputs.sh &> ${base}.log
-    mv master_bed12.bed ${base}.bed.tmp
-
-    ## isolate exon blocks
-    awk -FS="\t" '{print \$11}' ${base}.bed.tmp > mature_len.tmp
-
-    ## sum exon block values
-    awk -v FS="," '{for(i=t=0;i<NF;) t+=\$++i; \$0=t}1' mature_len.tmp > mature_length
-
-    ## concat to annotation file.
-    paste ${base}.bed.tmp mature_length > ${base}.bed
-    """
-
-}
-
-
-process FASTA{
-    tag "${base}:${tool}"
-    label 'process_high'
-    publishDir "${params.outdir}/circrna_discovery/${tool}/${base}", mode: params.publish_dir_mode, pattern: "fasta/*"
-
-    input:
-    tuple val(base), val(tool), file(bed) from ch_annotation
-    file(fasta) from ch_fasta
-
-    output:
-    tuple val(base), file("fasta/*") into ch_mature_len_fasta
-
-    script:
-    """
-    ## FASTA sequences (bedtools does not like the extra annotation info - split will not work properly)
-    cut -d\$'\t' -f1-12 ${base}.bed > bed12.tmp
-    bedtools getfasta -fi $fasta -bed bed12.tmp -s -split -name > circ_seq.tmp
-    ## clean fasta header
-    grep -A 1 '>' circ_seq.tmp | cut -d: -f1,2,3 > circ_seq.fa && rm circ_seq.tmp
-    ## output to dir
-    mkdir -p fasta
-    awk -F '>' '/^>/ {F=sprintf("fasta/%s.fa",\$2); print > F;next;} {print >> F;}' < circ_seq.fa
-    """
-}
-
-
 /*
 ================================================================================
                         Generate circRNA count matrix
@@ -1503,6 +1496,68 @@ if(tools_selected > 1){
                             miRNA Prediction
 ================================================================================
 */
+process ANNOTATION{
+    tag "${base}:${tool}"
+    label 'process_high'
+    publishDir "${params.outdir}/circrna_discovery/${tool}/${base}", mode: params.publish_dir_mode, pattern: "${base}.bed"
+    publishDir "${params.outdir}/circrna_discovery/${tool}/annotation_logs", mode: params.publish_dir_mode, pattern: "${base}.log"
+
+    when:
+    'mirna_prediction' in module
+
+    input:
+    tuple val(base), val(tool), file(circs) from ch_circs
+    file(gtf_filt) from ch_gtf_filtered
+
+    output:
+    tuple val(base), val(tool), file("${base}.bed") into ch_annotation
+    tuple val(base), file("${base}.log") into annotation_logs
+
+    script:
+    """
+    mv $circs circs.bed
+    bash ${workflow.projectDir}/bin/annotate_outputs.sh &> ${base}.log
+    mv master_bed12.bed ${base}.bed.tmp
+
+    ## isolate exon blocks
+    awk -FS="\t" '{print \$11}' ${base}.bed.tmp > mature_len.tmp
+
+    ## sum exon block values
+    awk -v FS="," '{for(i=t=0;i<NF;) t+=\$++i; \$0=t}1' mature_len.tmp > mature_length
+
+    ## concat to annotation file.
+    paste ${base}.bed.tmp mature_length > ${base}.bed
+    """
+
+}
+
+process FASTA{
+    tag "${base}:${tool}"
+    label 'process_high'
+    publishDir "${params.outdir}/circrna_discovery/${tool}/${base}", mode: params.publish_dir_mode, pattern: "fasta/*"
+
+    when:
+    'mirna_prediction' in module
+
+    input:
+    tuple val(base), val(tool), file(bed) from ch_annotation
+    file(fasta) from ch_fasta
+
+    output:
+    tuple val(base), file("fasta/*") into ch_mature_len_fasta
+
+    script:
+    """
+    ## FASTA sequences (bedtools does not like the extra annotation info - split will not work properly)
+    cut -d\$'\t' -f1-12 ${base}.bed > bed12.tmp
+    bedtools getfasta -fi $fasta -bed bed12.tmp -s -split -name > circ_seq.tmp
+    ## clean fasta header
+    grep -A 1 '>' circ_seq.tmp | cut -d: -f1,2,3 > circ_seq.fa && rm circ_seq.tmp
+    ## output to dir
+    mkdir -p fasta
+    awk -F '>' '/^>/ {F=sprintf("fasta/%s.fa",\$2); print > F;next;} {print >> F;}' < circ_seq.fa
+    """
+}
 
 process TARGETSCAN_DATABASE{
     when:
@@ -1623,39 +1678,35 @@ process MIRNA_TARGETS{
                             Differential Expression
 ================================================================================
 */
+// process HISAT_ALIGN{
+//     tag "${base}"
+//     label 'process_high'
+//     publishDir params.outdir, mode: params.publish_dir_mode, pattern: "${base}.bam",
+//         saveAs: { params.save_rnaseq_intermediates ? "differential_expression/intermediates/Hisat2/${it}" : null }
 
-// converseley to CIRIquant using Hisat2, this proc does need the index files. stage as new channel
-ch_hisat_index_files = params.hisat ? Channel.value(file("${params.hisat}/*")) :  hisat_built
+//     when:
+//     'differential_expression' in module
 
-process HISAT_ALIGN{
-    tag "${base}"
-    label 'process_high'
-    publishDir params.outdir, mode: params.publish_dir_mode, pattern: "${base}.bam",
-        saveAs: { params.save_rnaseq_intermediates ? "differential_expression/intermediates/Hisat2/${it}" : null }
+//     input:
+//     tuple val(base), file(fastq) from hisat_reads
+//     file(hisat2_index) from ch_hisat_index_files.collect()
+//     file(fasta) from ch_fasta
 
-    when:
-    'differential_expression' in module
+//     output:
+//     tuple val(base), file("${base}.bam") into hisat_bam
 
-    input:
-    tuple val(base), file(fastq) from hisat_reads
-    file(hisat2_index) from ch_hisat_index_files.collect()
-    file(fasta) from ch_fasta
-
-    output:
-    tuple val(base), file("${base}.bam") into hisat_bam
-
-    script:
-    if(fastq[1]){
-        """
-        hisat2 -p ${task.cpus} --dta -q -x ${fasta.baseName} -1 ${fastq[0]} -2 ${fastq[1]} -t | samtools view -bS - | samtools sort --threads ${task.cpus} -m 2G - > ${base}.bam
-        """
-    }
-    else{
-        """
-        hisat2 -p ${task.cpus} --dta -q -x ${fasta.baseName} -U ${fastq[0]} -t | samtools view -bS - | samtools sort --threads ${task.cpus} -m 2G - > ${base}.bam
-        """
-    }
-}
+//     script:
+//     if(fastq[1]){
+//         """
+//         hisat2 -p ${task.cpus} --dta -q -x ${fasta.baseName} -1 ${fastq[0]} -2 ${fastq[1]} -t | samtools view -bS - | samtools sort --threads ${task.cpus} -m 2G - > ${base}.bam
+//         """
+//     }
+//     else{
+//         """
+//         hisat2 -p ${task.cpus} --dta -q -x ${fasta.baseName} -U ${fastq[0]} -t | samtools view -bS - | samtools sort --threads ${task.cpus} -m 2G - > ${base}.bam
+//         """
+//     }
+// }
 
 process STRINGTIE{
     tag "${base}"
@@ -1667,7 +1718,7 @@ process STRINGTIE{
     'differential_expression' in module
 
     input:
-    tuple val(base), file(bam) from hisat_bam
+    tuple val(base), file(bam) from star_bam
     file(gtf) from ch_gtf
 
     output:
@@ -1737,7 +1788,7 @@ process MULTIQC{
     input:
     file(raw_fastqc) from fastqc_raw.collect().ifEmpty([])
     file(trim_fastqc) from fastqc_trimmed.collect().ifEmpty([])
-    file(BBDUK_stats) from bbduk_stats_ch.collect().ifEmpty([])
+    file(trimgalore_stats) from trim_results.collect().ifEmpty([])
     file(multiqc_config) from ch_multiqc_config
     file(mqc_custom_config) from ch_multiqc_custom_config.collect().ifEmpty([])
     file('software_versions/*') from software_versions_yaml.collect()
