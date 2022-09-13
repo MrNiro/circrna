@@ -386,6 +386,7 @@ getDESeqDEAbyContrast <- function(dds, contrast, reference, var, outdir, inputda
     write.table(up_regulated, file.path(dir, paste("DESeq2", contrast, "up_regulated_differential_expression.txt", sep="_")), sep="\t", row.names=F, quote=F)
     write.table(down_regulated, file.path(dir, paste("DESeq2", contrast, "down_regulated_differential_expression.txt", sep="_")), sep="\t", row.names=F, quote=F)
 
+    res_df <- as.data.frame(res)
     out_res_df <- tibble::rownames_to_column(res_df, "ID")
     write.table(out_res_df, file.path(dir, paste("DESeq2", contrast, "whole_differential_expression.txt", sep="_")), sep="\t", row.names=F, quote=F)
 
