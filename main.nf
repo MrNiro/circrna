@@ -726,99 +726,99 @@ process FASTQC_RAW {
                                     TRIM
 ================================================================================
 */
-process TRIM_GALORE {
-    tag "${base}"
-    label 'process_medium'
-    publishDir params.outdir, mode: params.publish_dir_mode, pattern: "*.fq.gz",
-        saveAs: { params.save_qc_intermediates ? "quality_control/trimgalore/${it}" : null }
-
-    when:
-    params.trim_fastq
-
-    input:
-    tuple val(base), file(fastq) from trimming_reads
-
-    output:
-    tuple val(base), file('*.trim.fq.gz') into trim_reads_ch, fastqc_trim_reads
-    //file(*) into trim_results
-
-    script:
-    // Check the configs in ./nextflow.config
-    def c_r1   = params.clip_r1 > 0             ? "--clip_r1 ${params.clip_r1}"                         : ''
-    def c_r2   = params.clip_r2 > 0             ? "--clip_r2 ${params.clip_r2}"                         : ''
-    def tpc_r1 = params.three_prime_clip_r1 > 0 ? "--three_prime_clip_r1 ${params.three_prime_clip_r1}" : ''
-    def tpc_r2 = params.three_prime_clip_r2 > 0 ? "--three_prime_clip_r2 ${params.three_prime_clip_r2}" : ''
-
-    if(fastq[1]){
-    """
-    trim_galore \\
-        --cores ${task.cpus} \\
-        --gzip \\
-        --fastqc \\
-        --paired \\
-        $c_r1 \\
-        $c_r2 \\
-        $tpc_r1 \\
-        $tpc_r2 \\
-        ${fastq[0]} \\
-        ${fastq[1]}
-    """
-    }
-    else{
-    """
-    trim_galore \\
-        --cores ${task.cpus} \\
-        --gzip \\
-        --fastqc \\
-        $c_r1 \\
-        $tpc_r1 \\
-        ${fastq[0]}
-    """
-    }
-}
-
-// process BBDUK {
+// process TRIM_GALORE {
 //     tag "${base}"
 //     label 'process_medium'
 //     publishDir params.outdir, mode: params.publish_dir_mode, pattern: "*.fq.gz",
-//         saveAs: { params.save_qc_intermediates ? "quality_control/BBDUK/${it}" : null }
+//         saveAs: { params.save_qc_intermediates ? "quality_control/trimgalore/${it}" : null }
 
 //     when:
 //     params.trim_fastq
 
 //     input:
 //     tuple val(base), file(fastq) from trimming_reads
-//     path adapters from params.adapters
 
 //     output:
 //     tuple val(base), file('*.trim.fq.gz') into trim_reads_ch, fastqc_trim_reads
-//     file("*BBDUK.txt") into bbduk_stats_ch
+//     //file(*) into trim_results
 
 //     script:
-//     def adapter = params.adapters ? "ref=${params.adapters}" : ''
-//     def k = params.k ? "k=${params.k}" : ''
-//     def ktrim = params.ktrim ? "ktrim=${params.ktrim}" : ''
-//     def hdist = params.hdist ? "hdist=${params.hdist}" : ''
-//     def trimq = params.trimq ? "trimq=${params.trimq}" : ''
-//     def qtrim = params.qtrim ? "qtrim=${params.qtrim}" : ''
-//     def minlen = params.minlen ? "minlen=${params.minlen}" : ''
+//     // Check the configs in ./nextflow.config
+//     def c_r1   = params.clip_r1 > 0             ? "--clip_r1 ${params.clip_r1}"                         : ''
+//     def c_r2   = params.clip_r2 > 0             ? "--clip_r2 ${params.clip_r2}"                         : ''
+//     def tpc_r1 = params.three_prime_clip_r1 > 0 ? "--three_prime_clip_r1 ${params.three_prime_clip_r1}" : ''
+//     def tpc_r2 = params.three_prime_clip_r2 > 0 ? "--three_prime_clip_r2 ${params.three_prime_clip_r2}" : ''
+
+//     if(fastq[1]){
 //     """
-//     bbduk.sh \\
-//         -Xmx${task.memory.toGiga()}g \\
-//         threads=${task.cpus} \\
-//         in1=${fastq[0]} \\
-//         in2=${fastq[1]} \\
-//         out1=${base}_R1.trim.fq.gz \\
-//         out2=${base}_R2.trim.fq.gz \\
-//         $adapter \\
-//         $k \\
-//         $ktrim \\
-//         $trimq \\
-//         $qtrim \\
-//         $minlen \\
-//         stats=${base}_BBDUK.txt
+//     trim_galore \\
+//         --cores ${task.cpus} \\
+//         --gzip \\
+//         --fastqc \\
+//         --paired \\
+//         $c_r1 \\
+//         $c_r2 \\
+//         $tpc_r1 \\
+//         $tpc_r2 \\
+//         ${fastq[0]} \\
+//         ${fastq[1]}
 //     """
+//     }
+//     else{
+//     """
+//     trim_galore \\
+//         --cores ${task.cpus} \\
+//         --gzip \\
+//         --fastqc \\
+//         $c_r1 \\
+//         $tpc_r1 \\
+//         ${fastq[0]}
+//     """
+//     }
 // }
+
+process BBDUK {
+    tag "${base}"
+    label 'process_medium'
+    publishDir params.outdir, mode: params.publish_dir_mode, pattern: "*.fq.gz",
+        saveAs: { params.save_qc_intermediates ? "quality_control/BBDUK/${it}" : null }
+
+    when:
+    params.trim_fastq
+
+    input:
+    tuple val(base), file(fastq) from trimming_reads
+    path adapters from params.adapters
+
+    output:
+    tuple val(base), file('*.trim.fq.gz') into trim_reads_ch, fastqc_trim_reads
+    file("*BBDUK.txt") into bbduk_stats_ch
+
+    script:
+    def adapter = params.adapters ? "ref=${params.adapters}" : ''
+    def k = params.k ? "k=${params.k}" : ''
+    def ktrim = params.ktrim ? "ktrim=${params.ktrim}" : ''
+    def hdist = params.hdist ? "hdist=${params.hdist}" : ''
+    def trimq = params.trimq ? "trimq=${params.trimq}" : ''
+    def qtrim = params.qtrim ? "qtrim=${params.qtrim}" : ''
+    def minlen = params.minlen ? "minlen=${params.minlen}" : ''
+    """
+    bbduk.sh \\
+        -Xmx${task.memory.toGiga()}g \\
+        threads=${task.cpus} \\
+        in1=${fastq[0]} \\
+        in2=${fastq[1]} \\
+        out1=${base}_R1.trim.fq.gz \\
+        out2=${base}_R2.trim.fq.gz \\
+        $adapter \\
+        $k \\
+        $ktrim \\
+        $trimq \\
+        $qtrim \\
+        $minlen \\
+        stats=${base}_BBDUK.txt
+    """
+}
 
 aligner_reads = params.trim_fastq ? trim_reads_ch : raw_reads
 
