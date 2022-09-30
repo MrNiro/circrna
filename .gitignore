@@ -11,3 +11,4 @@ testing*
 *.idea*
 samples.csv
 phenotype.csv
+utils/gene_type/searching_results.txt
