@@ -9,3 +9,5 @@ testing*
 *.pyc
 .vscode/
 *.idea*
+samples.csv
+phenotype.csv
