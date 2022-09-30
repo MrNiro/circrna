@@ -705,7 +705,7 @@ if(params.input_type == 'bam'){
 
 process FASTQC_RAW {
     tag "${base}"
-    label 'process_low'
+    label 'process_medium'
     label 'py3'
 
     input:
@@ -1232,7 +1232,7 @@ process SEGEMEHL_ALIGN{
 
 
 // collect circrna info from each alignment process
-ch_circs = ciriquant_annotated.mix(circexplorer2_annotated, dcc_annotated, circrna_finder_annotated, find_circ_annotated, mapsplice_annotated, segemehl_annotated)
+ch_circs = ciriquant_annotated.mix(circexplorer2_annotat, circrna_finder_annotated, find_circ_annotated, mapsplice_annotated, segemehl_annotated)
 
 
 /*
@@ -1241,7 +1241,7 @@ ch_circs = ciriquant_annotated.mix(circexplorer2_annotated, dcc_annotated, circr
 ================================================================================
 */
 
-quantification_results = ciriquant_results.mix(circexplorer2_results, circrna_finder_results, dcc_results, find_circ_results, mapsplice_results, segemehl_results)
+quantification_results = ciriquant_results.mix(circexplorer2_results, circrna_finder_results, find_circ_results, mapsplice_results, segemehl_results)
 
 if(tools_selected > 1){
     process MERGE_TOOLS{
