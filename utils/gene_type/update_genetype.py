@@ -38,7 +38,7 @@ def generate_gene_type():
             name_type[g_name] = g_type
     gene_type_file.close()
 
-    my_gene_type = open("my_gene_type_2.txt", "w")
+    my_gene_type = open("my_gene_type.txt", "w")
     for name in name_type.keys():
         g_type = name_type[name]
         line = "%s %s\n" % (name, g_type)
