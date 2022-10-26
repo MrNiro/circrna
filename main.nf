@@ -905,7 +905,7 @@ process STAR{
     tag "${base}"
     label 'process_high'
     publishDir params.outdir, mode: params.publish_dir_mode, pattern: "${base}",
-        saveAs: { params.save_quantification_intermediates ? "circrna_discovery/STAR/1st_Pass/${it}" : null }
+        saveAs: { params.save_quantification_intermediates ? "circrna_discovery/STAR/${it}" : null }
 
     when:
     ('circexplorer2' in tool || 'circrna_finder' in tool || 'dcc' in tool) && 'circrna_discovery' in module
@@ -965,7 +965,7 @@ process CIRCEXPLORER2{
     tag "${base}"
     label 'process_medium'
     publishDir params.outdir, mode: params.publish_dir_mode, pattern: "${base}",
-        saveAs: { params.save_quantification_intermediates ? "circrna_discovery/CIRCexplorer2/intermediates/${it}" : null }
+        saveAs: { params.save_quantification_intermediates ? "circrna_discovery/CIRCexplorer2/${it}" : null }
 
     when:
     'circexplorer2' in tool && 'circrna_discovery' in module
