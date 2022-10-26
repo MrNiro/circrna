@@ -47,7 +47,7 @@ def crawler(g_name):
 
 
 def combine_circexplore(circexplore_path):
-    all_bed = {}
+    all_detected_circrna = {}
 
     for _, dirs, _ in os.walk(circexplore_path):
         for dir_name in dirs:
@@ -66,9 +66,9 @@ def combine_circexplore(circexplore_path):
                         if "," in rna_name:
                             rna_name = rna_name.split(",")[0]
 
-                        if rna_id not in all_bed:
-                            all_bed[rna_id] = [rna_type, rna_name]
-    return all_bed
+                        if rna_id not in all_detected_circrna:
+                            all_detected_circrna[rna_id] = [rna_type, rna_name]
+    return all_detected_circrna
 
 
 def combine_DEA_circrna(all_detected_circrna):
@@ -98,7 +98,10 @@ def combine_DEA_circrna(all_detected_circrna):
     for each in all_rna.keys():
         if each in all_detected_circrna:
             all_rna[each].append(all_detected_circrna[each])
-        raise Exception()
+        else:
+            print(each)
+            print(all_rna[each])
+            raise Exception()
         # print(all_rna[each])
     return all_rna, diff_types
 
@@ -129,15 +132,19 @@ def load_normalize_count():
 
 
 def generate_csv(all_rna, diff_types, rna_count):
+    dea_groups_num = len(diff_types)
+
     combine_result = open("../results/combined_differential_expression.csv", "w")
 
     # generate csv Title
     csv_title = "circrna_ID,circType,geneName,geneType,"
     for each in diff_types:
         csv_title += ("log2FC_%s,P_value_%s," % (each, each))
+
     csv_title += "Normalized_Count_Sum,"
-    for i in range(10, 18):
-        csv_title += ("ZZ" + str(i) + "_Count,")
+    for i in range(110, 116):
+        csv_title += ("RW" + str(i) + "_Count,")
+
     csv_title += "\n"
     combine_result.write(csv_title)
 
@@ -153,8 +160,14 @@ def generate_csv(all_rna, diff_types, rna_count):
         else:
             g_type = crawler(g_name)
 
-        line = ("%s," * 8) \
-               % (each, circ_type, g_name.upper(), g_type, value[0], value[1], value[2], value[3])
+        line = ("%s," * 4) \
+               % (each, circ_type, g_name.upper(), g_type)
+
+        # add the log2FC and p value
+        for i in range(dea_groups_num * 2):
+            line += "%s," % value[i]
+        # line += ("%s," * dea_groups_num * 2) % value
+
         if each in rna_count:
             line += rna_count[each]
         line += "\n"
@@ -164,7 +177,7 @@ def generate_csv(all_rna, diff_types, rna_count):
 
 
 if __name__ == '__main__':
-    detected_circrna = combine_circexplore("../results/circexploer-ZZ/")
+    detected_circrna = combine_circexplore("../results/circexploer-1026/")
     my_rna_count = load_normalize_count()
     my_rna, my_diff = combine_DEA_circrna(detected_circrna)
     print("Circle RNA number: %d" % len(my_rna))
