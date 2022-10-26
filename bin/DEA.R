@@ -300,8 +300,10 @@ DESeq2 <- function(inputdata, data_type){
         design = inputdata$design)
 
         levels <- as.character(unique(inputdata$pheno$condition))
-        reference <- "CTRL"
-        contrasts <- levels[levels != paste0(reference)]
+
+        levels_1 <- levels[1:3]
+        reference <- "shScramble"
+        contrasts <- levels_1[levels_1 != paste0(reference)]
         dds$condition <- relevel(dds$condition, ref = paste0(reference))
         dds <- DESeq(dds, quiet=TRUE)
 
@@ -311,6 +313,20 @@ DESeq2 <- function(inputdata, data_type){
             contrast <- paste(var, "vs", reference, sep="_")
             DEG <- getDESeqDEAbyContrast(dds, contrast, reference, var, outdir, inputdata)
         }
+
+        levels_2 <- levels[4:5]
+        reference <- "iGC2"
+        contrasts <- levels_2[levels_2 != paste0(reference)]
+        dds$condition <- relevel(dds$condition, ref = paste0(reference))
+        dds <- DESeq(dds, quiet=TRUE)
+
+        DESeq2_plots(dds, outdir)
+
+        for(var in contrasts){
+            contrast <- paste(var, "vs", reference, sep="_")
+            DEG <- getDESeqDEAbyContrast(dds, contrast, reference, var, outdir, inputdata)
+        }
+
     }else if(data_type == "circRNA"){
         outdir <- "circRNA/"
 
